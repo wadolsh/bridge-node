@@ -3,7 +3,7 @@ var customMethod = {};
 
 module.exports = function(config) {
   for(var key in config) {
-    //console.log("method module load = " + bridge_config[key].module.filename);
+console.log("method module load = " + config[key].module.filename, key, config[key].module);
     var module = customMethod[key] = config[key].module;
     module.methodConfig = config[key];
   }
@@ -81,7 +81,7 @@ var excuteMethod = function(idx, reqDataArray, resData, req, res) {
           //afterFilter(configKey, reqData, result, req, res);
           resData[reqData.key] = result;
           if (reqDataArray[++idx]) {
-            exports.excuteMethod(idx, reqDataArray, resData, req, res);
+            excuteMethod(idx, reqDataArray, resData, req, res);
           } else {
             res.json(resData);
           }
