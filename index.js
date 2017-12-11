@@ -98,6 +98,10 @@ var excuteMethod = function(idx, reqDataArray, resData, req, res) {
 };
 
 var excuteFilter = function(idx, filterArray, reqData, req, res, callback, result) {
+  if (!filterArray || !filterArray[idx]) {
+    callback();
+    return;
+  }
   filterArray[idx](function() {
     if (filterArray[++idx]) {
       excuteFilter(idx, filterArray, reqData, req, res, callback, result);
