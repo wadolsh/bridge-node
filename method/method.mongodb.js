@@ -185,7 +185,10 @@ exports.reqUpdate = function(reqData, callback, req){
 exports.reqUpdateOperator = function(reqData, callback, req){
   var query = req.query ? req.query : {};
   //query[idName] = reqData.data[idName];
-  query[idName] = getId(reqData.data[idName], reqData.dataName);
+  //query[idName] = getId(reqData.data[idName], reqData.dataName);
+  for (var key in reqData.query) {
+    query[key] = reqData.query[key];
+  }
   delete reqData.data[idName];
   var updateData = reqData.operator;
   
