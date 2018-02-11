@@ -45,7 +45,12 @@ route.bridge = function(req, res){
  * 入口
  */
 var process = function(req, res) {
-  console.log(req.body.req);
+  console.log(JSON.stringify(req.body.req, function(key, value) {
+    if (typeof value === "string") {
+      return value.substring(0, 1000);
+    }
+    return value;
+  }));
   var reqDataArray = req.body.req;
   var resData = {};
   excuteMethod(0, reqDataArray, resData, req, res);
