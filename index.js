@@ -3,9 +3,10 @@ var customMethod = {};
 
 module.exports = function(config) {
   for(var key in config) {
-console.log("method module load = " + config[key].module.filename, key, config[key].module);
+//console.log("method module load = " + config[key].module.filename, key, config[key].module);
     var module = customMethod[key] = config[key].module;
     module.methodConfig = config[key];
+    if (module.init) module.init(module.methodConfig);
   }
   bridge_config = config;
   return {
@@ -16,7 +17,7 @@ console.log("method module load = " + config[key].module.filename, key, config[k
 
 var route = function(req, res) {
   var requestUrl = req.url;
-console.log('url:' + requestUrl, req.method);
+console.log('url:' + requestUrl, req.method, req.headers['x-forwarded-for'] || req.connection.remoteAddress);
   //console.log(requestUrl);
   var pathNames = requestUrl.split(/[/?]/);
   var routhFunc = route;
@@ -77,10 +78,20 @@ var excuteMethod = function(idx, reqDataArray, resData, req, res) {
       }
     }
 
+    if (!configKey) {
+      res.json({error : 'Not exists method.'});
+      return;
+    }
+
     var beforeFilterArray = bridge_config[configKey].beforeFilter || [];
     excuteFilter(0, beforeFilterArray, reqData, req, res, function() {
       //beforeFilter(configKey, reqData, req, res);
-      methodObj[reqData.method](reqData, function(result) {
+      methodObj[reqData.method](reqData, function(result, err) {
+        if (err) {
+          resData['error'] = err.errmsg || JSON.stringify(err);
+          res.json(resData);
+          return;
+        }
         var afterFilterArray = bridge_config[configKey].afterFilter || [];
         excuteFilter(0, afterFilterArray, reqData, req, res, function() {
           //afterFilter(configKey, reqData, result, req, res);

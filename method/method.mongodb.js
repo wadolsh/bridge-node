@@ -4,12 +4,12 @@ var ObjectID = mongodb.ObjectID;
 //https://github.com/mongodb/node-mongodb-native
 //http://mongodb.github.io/node-mongodb-native/api-generated/collection.html
 
-var newId = function() {
+var newId = function () {
   // Create a new ObjectID
   return useOid ? new ObjectID() : new ObjectID().toHexString();
 };
 
-var getId = function(id, tableName) {
+var getId = function (id, tableName) {
   var collectionMeta = config.db.collections[tableName];
   var _useOid = collectionMeta && collectionMeta.useOid ? collectionMeta.useOid : useOid;
   return _useOid ? new ObjectID(id) : id;
@@ -18,7 +18,7 @@ var getId = function(id, tableName) {
 var config = null;
 var idName = null;
 var useOid = null;
-exports.init = function(_config) {
+exports.init = function (_config) {
   config = _config;
   idName = _config.db.idName;
   useOid = _config.db.useOid;
@@ -41,12 +41,13 @@ var Db = require('mongodb').Db,
 /**
  * 1件取得
  */
-exports.reqData = function(reqData, callback){
+exports.reqData = function (reqData, callback) {
   var query = {};
   //query[idName] = reqData[idName];
   query[idName] = getId(reqData[idName], reqData.dataName);
-  exports.methodConfig.db.conn.collection(reqData.dataName).findOne(query, function (err, docs) {
-    if(err) throw err;
+  exports.methodConfig.db.database.collection(reqData.dataName).findOne(query, function (err, docs) {
+    //if(err) throw err;
+    if (err) return callback(null, err);
     callback(docs);
   });
 };
@@ -54,8 +55,8 @@ exports.reqData = function(reqData, callback){
 /**
  * リスト取得
  */
-exports.reqList = function(reqData, callback){
-//console.log('reqListQuery', reqData.dataName, reqData.parm);
+exports.reqList = function (reqData, callback) {
+  //console.log('reqListQuery', reqData.dataName, reqData.parm);
   var queryFilter = null;
   var projection = null;
   if (Array.isArray(reqData.parm)) {
@@ -63,12 +64,13 @@ exports.reqList = function(reqData, callback){
     projection = reqData.parm[1];
     console.log('queryFilter', queryFilter);
     console.log('projection', projection);
-  } else {
+  }
+  else {
     queryFilter = reqData.parm;
     projection = {};
   }
 
-  var result = exports.methodConfig.db.conn.collection(reqData.dataName).find(queryFilter, projection);
+  var result = exports.methodConfig.db.database.collection(reqData.dataName).find(queryFilter, projection);
   if (reqData.option) {
     console.log('option', reqData.option);
     var option = null;
@@ -79,7 +81,8 @@ exports.reqList = function(reqData, callback){
           result[key](option[key]);
         }
       };
-    } else {
+    }
+    else {
       for (var key in reqData.option) {
         option = reqData.option[key];
         result[key](option);
@@ -87,42 +90,62 @@ exports.reqList = function(reqData, callback){
     }
   }
   result.toArray(function (err, docs) {
-    if(err) throw err;
+    //if(err) throw err;
+    if (err) return callback(null, err);
     callback(docs);
   });
 };
 
-exports.reqCount = function(reqData, callback){
-  exports.methodConfig.db.conn.collection(reqData.dataName).find(reqData.parm).count(function (err, docs) {
+exports.reqCount = function (reqData, callback) {
+  exports.methodConfig.db.database.collection(reqData.dataName).find(reqData.parm).count(function (err, docs) {
     console.log(docs);
-    if(err) throw err;
+    //if(err) throw err;
+    if (err) return callback(null, err);
     callback(docs);
   });
 };
 
 
-exports.reqDistinct = function(reqData, callback){
-  exports.methodConfig.db.conn.collection(reqData.dataName).distinct(reqData.field, reqData.parm, function (err, docs) {
-    if(err) throw err;
+exports.reqDistinct = function (reqData, callback) {
+  exports.methodConfig.db.database.collection(reqData.dataName).distinct(reqData.field, reqData.parm, function (err, docs) {
+    //if(err) throw err;
+    if (err) return callback(null, err);
     callback(docs);
   });
 };
 
-exports.reqAggregate = function(reqData, callback){
-  exports.methodConfig.db.conn.collection(reqData.dataName).aggregate(reqData.parm).toArray(function (err, docs) {
-    if(err) throw err;
+exports.reqAggregate = function (reqData, callback) {
+  exports.methodConfig.db.database.collection(reqData.dataName).aggregate(reqData.parm).toArray(function (err, docs) {
+    //if(err) throw err;
+    if (err) return callback(null, err);
     callback(docs);
   });
 };
 
-exports.reqInsert = function(reqData, callback){
+exports.reqInsert = function (reqData, callback) {
   // id採番
   //reqData.data[idName] = newId();
-  reqData.data[idName] = reqData.data[idName] || newId();
-  exports.methodConfig.db.conn.collection(reqData.dataName).insert(reqData.data, {w:1}, function (err, docs) {
-    if(err) throw err;
-    callback(docs);
-  });
+  if (Array.isArray(reqData.data)) {
+    reqData.data.forEach(o => {
+      o[idName] = o[idName] || newId();
+    });
+    exports.methodConfig.db.database.collection(reqData.dataName).insertMany(reqData.data, {
+      w: 1
+    }, function (err, docs) {
+      //if(err) throw err;
+      if (err) return callback(null, err);
+      callback(docs);
+    });
+  } else {
+    reqData.data[idName] = reqData.data[idName] || newId();
+    exports.methodConfig.db.database.collection(reqData.dataName).insert(reqData.data, {
+      w: 1
+    }, function (err, docs) {
+      //if(err) throw err;
+      if (err) return callback(null, err);
+      callback(docs);
+    });
+  }
 };
 
 /*
@@ -140,22 +163,25 @@ exports.reqInsertId = function(reqData, callback){
 */
 
 
-exports.reqBulkUpdate = function(reqData, callback, req){
+exports.reqBulkUpdate = function (reqData, callback, req) {
   var query = req.query ? req.query : {};
   //query[idName] = reqData.data[idName];
   query[idName] = getId(reqData.data[idName], reqData.dataName);
   delete reqData.data[idName];
-  
-  var bulk = exports.methodConfig.db.conn.collection(reqData.dataName).initializeUnorderedBulkOp();
+
+  var bulk = exports.methodConfig.db.database.collection(reqData.dataName).initializeUnorderedBulkOp();
   var bulkDatas = reqData.data;
   var selected = null;
-  for (var i=0, size=bulkDatas.length; i<size; i++) {
+  for (var i = 0, size = bulkDatas.length; i < size; i++) {
     selected = bulkDatas[i];
-    bulk.find(selected.find).updateOne({$set: selected.update});
+    bulk.find(selected.find).updateOne({
+      $set: selected.update
+    });
     //console.log(selected);
   }
-  bulk.execute(function(err, docs) {
-    if(err) throw err;
+  bulk.execute(function (err, docs) {
+    //if(err) throw err;
+    if (err) return callback(null, err);
 
     if (docs == 0) {
       callback({});
@@ -166,13 +192,16 @@ exports.reqBulkUpdate = function(reqData, callback, req){
 };
 
 
-exports.reqUpdate = function(reqData, callback, req){
+exports.reqUpdate = function (reqData, callback, req) {
   var query = req.query ? req.query : {};
   //query[idName] = reqData.data[idName];
   query[idName] = getId(reqData.data[idName], reqData.dataName);
   delete reqData.data[idName];
-  exports.methodConfig.db.conn.collection(reqData.dataName).updateOne(query, {$set : reqData.data}, function (err, docs) {
-    if(err) throw err;
+  exports.methodConfig.db.database.collection(reqData.dataName).updateOne(query, {
+    $set: reqData.data
+  }, function (err, docs) {
+    //if (err) throw err;
+    if (err) return callback(null, err);
 
     if (docs == 0) {
       callback({});
@@ -182,7 +211,7 @@ exports.reqUpdate = function(reqData, callback, req){
   });
 };
 
-exports.reqUpdateOperator = function(reqData, callback, req){
+exports.reqUpdateOperator = function (reqData, callback, req) {
   var query = req.query ? req.query : {};
   //query[idName] = reqData.data[idName];
   //query[idName] = getId(reqData.data[idName], reqData.dataName);
@@ -191,20 +220,22 @@ exports.reqUpdateOperator = function(reqData, callback, req){
   }
   delete reqData.data[idName];
   var updateData = reqData.operator;
-  
+
   if (updateData['$set']) {
     var $setData = reqData.data;
     for (var key in $setData) {
       updateData['$set'][key] = $setData[key];
     }
-  } else {
+  }
+  else {
     updateData['$set'] = reqData.data;
   }
 
-console.log('query:', query);
-console.log('updateData:', updateData);
-  exports.methodConfig.db.conn.collection(reqData.dataName).updateMany(query, updateData, function (err, docs) {
-    if(err) throw err;
+  console.log('query:', query);
+  console.log('updateData:', updateData);
+  exports.methodConfig.db.database.collection(reqData.dataName).updateMany(query, updateData, function (err, docs) {
+    //if (err) throw err;
+    if (err) return callback(null, err);
     if (docs == 0) {
       callback({});
       return;
@@ -224,18 +255,24 @@ exports.reqSave = function(reqData, callback){
 };
 */
 
-exports.reqSave = function(reqData, callback, req){
+exports.reqSave = function (reqData, callback, req) {
   var id = reqData.data[idName];
-  if(id) {
+  if (id) {
     //update
     var query = req.query ? req.query : {};
     //query[idName] = id;
     query[idName] = getId(id, reqData.dataName);
     delete reqData.data[idName];
-    exports.methodConfig.db.conn.collection(reqData.dataName).update(query, {$set : reqData.data}, function (err, docs) {
-
-      if(err) throw err;
-console.log('update target: ', query);
+    //console.log('query', query, reqData.data);
+    exports.methodConfig.db.database.collection(reqData.dataName).update(query, {
+      $set: reqData.data,
+    }, {
+      multi: true
+    }, function (err, docs) {
+      if (err) {
+        //throw err;
+        return callback(null, err);
+      }
       if (docs == 0) {
         callback({});
         return;
@@ -243,24 +280,72 @@ console.log('update target: ', query);
       callback(reqData.data);
       //callback(docs.ops[0]);
     });
-  } else {
+  }
+  else {
     reqData.data[idName] = newId();
-    exports.methodConfig.db.conn.collection(reqData.dataName).insert(reqData.data, {w:1}, function (err, docs) {
-      if(err) throw err;
+    exports.methodConfig.db.database.collection(reqData.dataName).insert(reqData.data, {
+      w: 1
+    }, function (err, docs) {
+      if (err) {
+        //throw err;
+        return callback(null, err);
+      }
       callback(docs.ops[0]);
     });
   }
 };
 
-exports.reqDelete = function(reqData, callback, req){
+exports.reqDelete = function (reqData, callback, req) {
   var query = reqData.query ? reqData.query : {};
   //query[idName] = reqData[idName];
-  query[idName] = getId(reqData[idName], reqData.dataName);
-  
+  console.log('---------', reqData[idName], reqData[idName] == '*');
+  if (reqData[idName] == '*') {
+    query = {};
+  }
+  else if (reqData[idName]) {
+    query[idName] = getId(reqData[idName], reqData.dataName);
+  }
+  else {
+    callback({
+      delete: false
+    });
+    return;
+  }
+
   console.log(reqData);
   console.log(query);
-  exports.methodConfig.db.conn.collection(reqData.dataName).remove(query, {w:1}, function (err, docs) {
-    if(err) throw err;
+  exports.methodConfig.db.database.collection(reqData.dataName).remove(query, {
+    w: 1
+  }, function (err, docs) {
+    if (err) {
+      //throw err;
+      return callback(null, err);
+    }
     callback(docs);
+  });
+};
+
+exports.reqDrop = function (reqData, callback, req) {
+  //var query = reqData.query ? reqData.query : {};
+  //query[idName] = getId(reqData[idName], reqData.dataName);
+  exports.methodConfig.db.database.listCollections({
+    name: reqData.dataName
+  }).hasNext(function (err, exist) {
+    console.log('reqDrop', exist, reqData);
+    if (exist) {
+      exports.methodConfig.db.database.collection(reqData.dataName).drop(function (err, drop) {
+        //if (err) throw err;
+        if (err) return callback(null, err);
+        callback({
+          exist: exist,
+          drop: drop
+        });
+      });
+    }
+    else {
+      callback({
+        exist: exist
+      });
+    }
   });
 };
