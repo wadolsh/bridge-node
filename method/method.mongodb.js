@@ -191,15 +191,24 @@ exports.reqBulkUpdate = function (reqData, callback, req) {
   });
 };
 
-
 exports.reqUpdate = function (reqData, callback, req) {
   var query = req.query ? req.query : {};
   //query[idName] = reqData.data[idName];
   query[idName] = getId(reqData.data[idName], reqData.dataName);
   delete reqData.data[idName];
-  exports.methodConfig.db.database.collection(reqData.dataName).updateOne(query, {
-    $set: reqData.data
-  }, function (err, docs) {
+
+  var updateData = {};
+
+  Object.keys(reqData.data).forEach(function(key) {
+    if (key.startsWith('$')) {
+      updateData[key] = reqData.data[key];
+      delete reqData.data[key];
+    }
+  });
+  updateData['$set'] = reqData.data;
+
+  exports.methodConfig.db.database.collection(reqData.dataName)
+         .updateOne(query, updateData, function (err, docs) {
     //if (err) throw err;
     if (err) return callback(null, err);
 
