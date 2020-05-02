@@ -44,7 +44,14 @@ var Db = require('mongodb').Db,
 exports.reqData = function (reqData, callback) {
   var query = {};
   //query[idName] = reqData[idName];
-  query[idName] = getId(reqData[idName], reqData.dataName);
+  if (reqData[idName]) {
+    query[idName] = getId(reqData[idName], reqData.dataName);
+  } else if (reqData.parm) {
+    query = reqData.parm;
+  } else {
+    query[idName] = null;
+  }
+  
   exports.methodConfig.db.database.collection(reqData.dataName).findOne(query, function (err, docs) {
     //if(err) throw err;
     if (err) return callback(null, err);
