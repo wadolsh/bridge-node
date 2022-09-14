@@ -145,7 +145,7 @@ exports.reqInsert = function (reqData, callback) {
     });
   } else {
     reqData.data[idName] = reqData.data[idName] || newId();
-    exports.methodConfig.db.database.collection(reqData.dataName).insert(reqData.data, {
+    exports.methodConfig.db.database.collection(reqData.dataName).insertOne(reqData.data, {
       w: 1
     }, function (err, docs) {
       //if(err) throw err;
@@ -161,7 +161,7 @@ exports.reqInsertId = function(reqData, callback){
     if(err) throw err;
     // id採番
     reqData.data[idName] = reqData.data[idName] || newId();
-    db.collection(reqData.dataName).insert(reqData.data, {w:1}, function (err, docs) {
+    db.collection(reqData.dataName).insertOne(reqData.data, {w:1}, function (err, docs) {
       if(err) throw err;
       callback(docs[0]);
     });
@@ -280,7 +280,7 @@ exports.reqSave = function (reqData, callback, req) {
     query[idName] = getId(id, reqData.dataName);
     delete reqData.data[idName];
     //console.log('query', query, reqData.data);
-    exports.methodConfig.db.database.collection(reqData.dataName).update(query, {
+    exports.methodConfig.db.database.collection(reqData.dataName).updateOne(query, {
       $set: reqData.data,
     }, {
       multi: true
@@ -299,14 +299,14 @@ exports.reqSave = function (reqData, callback, req) {
   }
   else {
     reqData.data[idName] = newId();
-    exports.methodConfig.db.database.collection(reqData.dataName).insert(reqData.data, {
+    exports.methodConfig.db.database.collection(reqData.dataName).insertOne(reqData.data, {
       w: 1
     }, function (err, docs) {
       if (err) {
         //throw err;
         return callback(null, err);
       }
-      callback(docs.ops[0]);
+      callback(reqData.data);
     });
   }
 };
